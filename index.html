@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Plano de Corte • CSV Mobile</title>
+  <style>
+    :root{
+      --bg:#f5f9ff; /* azul bem clarinho */
+      --card:#ffffff; /* cartões brancos */
+      --muted:#64748b; /* cinza médio legível */
+      --txt:#0b1224; /* texto principal escuro */
+      --accent:#2563eb; /* azul padrão */
+      --ring:rgba(37,99,235,.35) /* foco acessível */
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);background-image:linear-gradient(180deg,#f7fbff 0%, #f2f7ff 100%);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;line-height:1.35}
+    .wrap{max-width:1100px;margin:0 auto;padding:clamp(12px,2vw,24px)}
+    h1{font-size:clamp(20px,3.5vw,30px);margin:0 0 8px;letter-spacing:.2px}
+    .muted{color:var(--muted);font-size:1rem}
+    .card{background:var(--card);border:1px solid #e8eefb;border-radius:16px;padding:16px;box-shadow:0 6px 20px rgba(23,60,120,.06)}
+    .grid{display:grid;gap:12px}
+    .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    button,select,input,textarea{font-size:16px}
+    button{background:#0f172a;color:#fff;border:1px solid #0f172a;padding:12px 16px;border-radius:12px;box-shadow:0 2px 6px rgba(2,6,23,.08);transition:transform .05s ease, box-shadow .2s}
+    button:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(2,6,23,.12)}
+    button:focus-visible,select:focus-visible,input:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}
+    .btn-primary{background:var(--accent);border-color:var(--accent)}
+    .btn-danger{background:#dc2626}
+    .btn-ghost{background:#ffffff;border-color:#cbd5e1;color:#0b1224}
+    .btn-ghost:hover{background:#f1f5f9}
+    .row-controls{display:flex;gap:6px}
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    thead th{font-size:.82rem;letter-spacing:.02em;color:var(--muted);text-align:left;padding:6px 8px}
+    tbody td{background:#ffffff;border:0;padding:12px;border-radius:8px}
+    tbody tr{contain:content}
+    input[type="number"]{width:100%}
+    input,select{width:100%;background:#ffffff;border:1px solid #dde5f5;color:var(--txt);padding:12px 14px;border-radius:10px;outline:none}
+    input::placeholder,select::placeholder{color:#8fa3c7}
+    input:focus,select:focus{border-color:#93b4ff;box-shadow:0 0 0 3px rgba(37,99,235,.14)}
+    @media (max-width: 680px){
+      thead{display:none}
+      table, tbody, tr, td{display:block; width:100%}
+      tbody tr{background:#fff;border:1px solid #e6eefc;border-radius:14px;padding:10px 12px;margin-bottom:12px;box-shadow:0 4px 12px rgba(23,60,120,.05)}
+      tbody td{padding:8px 10px;border:0}
+      tbody td::before{content:attr(data-label);display:block;font-size:.78rem;color:#6b7fa6;margin-bottom:4px}
+      .row-controls{justify-content:flex-end}
+    }
+    .fab-add{position:fixed;bottom:80px;right:18px;z-index:999;background:#16a34a;color:#fff;padding:16px 18px;border-radius:50%;box-shadow:0 6px 18px rgba(22,163,74,.35);display:flex;justify-content:center;align-items:center;font-size:22px;border:none;cursor:pointer;transition:transform .05s ease, box-shadow .2s}
+    .fab-add:active{transform:scale(.95)}
+  </style>
+</head>
+<body>
+  <div class="wrap grid">
+    <header>
+      <h1>Plano de Corte • CSV</h1>
+      <div class="muted">Focado para celular • Exporta CSV compatível com Excel/Router CNC</div>
+    </header>
+    <section class="card grid" aria-label="Preferências">
+      <div class="toolbar" role="group">
+        <label class="pill small">Cliente padrão: <input id="defCliente" placeholder="Nome do cliente"/></label>
+        <label class="pill small">Projeto/Ambiente: <input id="defAmbiente" placeholder="Ex.: Cozinha Planejada"/></label>
+        <label class="pill small">Delimitador CSV:
+          <select id="csvSep">
+            <option value=",">Vírgula (,)</option>
+            <option value=";" selected>Ponto e vírgula (;)</option>
+            <option value="\\t">Tabulação (\t)</option>
+          </select>
+        </label>
+        <button class="btn-ghost" id="btnSalvarPadroes">Salvar padrões</button>
+      </div>
+    </section>
+    <div id="lists"></div>
+    <button id="fabAdd" class="fab-add" aria-label="Adicionar peça">+</button>
+    <section class="card grid" aria-label="Tabela do plano de corte">
+      <div class="toolbar">
+        <button class="btn-primary" id="btnAdd">+ Adicionar peça</button>
+        <button id="btnAdd10">+10</button>
+        <button id="btnImport">Importar CSV</button>
+        <input type="file" id="fileCsv" accept=".csv,text/csv" hidden>
+        <button class="btn-danger" id="btnLimpar">Limpar tudo</button>
+      </div>
+      <div style="overflow:auto">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>CodigoDaPeca_NoCliente</th>
+              <th>Descricao</th>
+              <th>Comprimento</th>
+              <th>Largura</th>
+              <th>Espessura</th>
+              <th>CodigoNome_Material</th>
+              <th>Id_Peca</th>
+              <th>Quantidade</th>
+              <th>NomeCliente</th>
+              <th>CodigoProcesso</th>
+              <th>CodigoModuloPai</th>
+              <th>NomeProjetoAmbiente</th>
+              <th>Descricao_Pai</th>
+              <th>BordaEsquerda</th>
+              <th>BordaSuperior</th>
+              <th>BordaDireita</th>
+              <th>BordaInferior</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="body"></tbody>
+        </table>
+      </div>
+      <div class="sticky">
+        <div class="toolbar">
+          <div class="kvs">
+            <span class="kv">Peças: <strong id="kvCount">0</strong></span>
+            <span class="kv">Quant. total: <strong id="kvQtd">0</strong></span>
+          </div>
+          <div class="toolbar" role="group">
+            <button id="btnExport" class="btn-primary">Exportar CSV</button>
+            <button id="btnDuplicarUltima">Duplicar última</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+  const COLS = ['CodigoDaPeca_NoCliente','Descricao','Comprimento','Largura','Espessura','CodigoNome_Material','Id_Peca','Quantidade','NomeCliente','CodigoProcesso','CodigoModuloPai','NomeProjetoAmbiente','Descricao_Pai','BordaEsquerda','BordaSuperior','BordaDireita','BordaInferior'];
+  const HISTORY_COLS = ['Descricao','CodigoNome_Material','NomeCliente','CodigoProcesso','CodigoModuloPai','NomeProjetoAmbiente','Descricao_Pai','BordaEsquerda','BordaSuperior','BordaDireita','BordaInferior'];
+  const $ = sel => document.querySelector(sel);
+  const bodyEl = () => document.getElementById('body');
+  const sepSelectEl = () => document.getElementById('csvSep');
+  const listsHost = () => document.getElementById('lists');
+  function getSep(){ const raw = sepSelectEl().value; return raw === "\\t" ? "\\t" : raw; }
+  function nextSequence(col){ const idx = COLS.indexOf(col); let max = 0; bodyEl().querySelectorAll('tr').forEach(tr=>{ const v = (tr.querySelectorAll('td input')[idx]?.value||'').trim(); const n = parseInt(v,10); if(!isNaN(n) && n>max) max=n; }); return max+1; }
+  const HMAX = 50; const hkey = (k)=> 'pc_hist_'+k;
+  function loadHist(k){ try{ return JSON.parse(localStorage.getItem(hkey(k))||'[]'); }catch(e){ return []; } }
+  function saveHist(k, value){ const v = (value||'').trim(); if(!v) return; const arr = loadHist(k).filter(x=>x.toLowerCase()!==v.toLowerCase()); arr.unshift(v); localStorage.setItem(hkey(k), JSON.stringify(arr.slice(0,HMAX))); renderDatalist(k); }
+  function renderDatalist(k){ let dl = document.getElementById('dl-'+k); if(!dl){ dl = document.createElement('datalist'); dl.id = 'dl-'+k; listsHost().appendChild(dl); } dl.innerHTML = ''; loadHist(k).forEach(opt=>{ const o=document.createElement('option'); o.value=opt; dl.appendChild(o); }); }
+  function rowToObj(tr){ const obj={}; [...tr.querySelectorAll('td input')].forEach((inp,i)=>{ obj[COLS[i]] = inp.value.trim(); }); return obj; }
+  function rowsToJSON(){ return [...bodyEl().querySelectorAll('tr')].map(rowToObj); }
+  function saveState(){ const data = rowsToJSON(); const prefs = {cliente: $('#defCliente').value, amb: $('#defAmbiente').value, sep: sepSelectEl().value}; localStorage.setItem('pc_rows', JSON.stringify(data)); localStorage.setItem('pc_prefs', JSON.stringify(prefs)); }
+  function loadState(){ try{ const prefs = JSON.parse(localStorage.getItem('pc_prefs')||'{}'); if(prefs.cliente) $('#defCliente').value = prefs.cliente; if(prefs.amb) $('#defAmbiente').value = prefs.amb; if(prefs.sep) sepSelectEl().value = prefs.sep; HISTORY_COLS.forEach(renderDatalist); const rows = JSON.parse(localStorage.getItem('pc_rows')||'[]'); if(rows.length){ rows.forEach(addRowFromObj); } recalc(); }catch(e){} }
+  function defaultFor(key){ if(key==='NomeCliente') return $('#defCliente').value||''; if(key==='NomeProjetoAmbiente') return $('#defAmbiente').value||''; if(key==='Quantidade') return '1'; if(key.startsWith('Borda')) return ''; return ''; }
+  function addRowFromObj(obj={}){ const tr = document.createElement('tr'); COLS.forEach(key=>{ const td = document.createElement('td'); td.setAttribute('data-label', key); const input = document.createElement('input'); input.placeholder = key; if(['Comprimento','Largura','Espessura','Quantidade','CodigoDaPeca_NoCliente','Id_Peca'].includes(key)){ input.type='number'; input.inputMode='numeric'; input.min='0'; } let val = obj[key] ?? defaultFor(key); if((key==='CodigoDaPeca_NoCliente' || key==='Id_Peca') && (val==='' || val==null)){ val = nextSequence(key); } input.value = val; if(HISTORY_COLS.includes(key)){ input.setAttribute('list','dl-'+key); input.addEventListener('blur', ()=> saveHist(key, input.value)); input.addEventListener('change', ()=> saveHist(key, input.value)); } input.addEventListener('input', ()=>{ recalc(); saveState(); }); td.appendChild(input); tr.appendChild(td); }); const tdAct = document.createElement('td'); tdAct.className='row-controls'; const bDel = btn('🗑️', ()=>{ tr.remove(); recalc(); saveState(); }); const bDup = btn('📄', ()=>{ const data=rowToObj(tr); delete data['CodigoDaPeca_NoCliente']; delete data['Id_Peca']; addRowFromObj(data); recalc(); saveState(); }); tdAct.append(bDup,bDel); tr.appendChild(tdAct); bodyEl().appendChild(tr); return tr; }
+  function btn(label, on){ const b=document.createElement('button'); b.textContent=label; b.addEventListener('click', on); return b; }
+  function recalc(){ const rows = rowsToJSON(); const count = rows.length; const qtd = rows.reduce((s,r)=> s + (parseFloat(r.Quantidade||0)||0), 0); document.getElementById('kvCount').textContent = count; document.getElementById('kvQtd').textContent = Intl.NumberFormat('pt-BR').format(qtd); }
+  function toCSV(rows, sep){ const esc = v => { if(v==null) v=''; v = String(v); if(v.includes('"') || v.includes('\n') || v.includes(sep)){ v = '"' + v.replace(/"/g,'""') + '"'; } return v; }; const header = COLS.map(esc).join(sep); const lines = rows.map(r => COLS.map(k => esc(r[k])).join(sep)); return [header, ...lines].join('\n'); }
+  function validateRows(rows){ const required = ['CodigoDaPeca_NoCliente','Descricao','Comprimento','Largura','Espessura','CodigoNome_Material','Quantidade']; for(const [i,r] of rows.entries()){ for(const k of required){ if(!String(r[k]||'').trim()) return { index:i, field:k }; } } return null; }
+  function isSafari(){ const ua = navigator.userAgent; return /Safari\//.test(ua) && !/Chrome|CriOS|Android/.test(ua); }
+  function exportCSVForSafari(csv, filename){
+    try{
+      const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+      const URLX = (window.URL || window.webkitURL);
+      const url = URLX.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=> URLX.revokeObjectURL(url), 1500);
+      return true;
+    }catch(e){}
+    try{
+      const dataUrl = 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF'+csv);
+      location.href = dataUrl;
+      return true;
+    }catch(e){}
+    try{
+      const w = window.open();
+      if(w){ w.document.write(`<pre>${csv.replace(/</g,'&lt;')}</pre>`); w.document.title = filename; return true; }
+    }catch(e){}
+    return false;
+  }
+  async function smartExportCSV(){
+    const sep = getSep();
+    const rows = rowsToJSON();
+    if(!rows.length){ alert('Adicione pelo menos 1 peça.'); return; }
+    const err = validateRows(rows);
+    if(err){ alert(`Linha ${err.index+1}: falta o campo obrigatório → ${err.field}`); return; }
+    const csv = toCSV(rows, sep);
+    const filename = `plano_corte_${new Date().toISOString().slice(0,10)}.csv`;
+    if(isSafari()){
+      const ok = exportCSVForSafari(csv, filename);
+      if(ok) return;
+    }
+    try{
+      const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+      const file = new File([blob], filename, {type:'text/csv'});
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        await navigator.share({ files: [file], title: 'Plano de Corte CSV', text: 'Exportado do Plano de Corte' });
+        return;
+      }
+    }catch(err){}
+    try{
+      const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=> URL.revokeObjectURL(a.href), 1500);
+      return;
+    }catch(err){}
+    exportCSVForSafari(csv, filename);
+  }
+  function importCSV(text){
+    const sep = getSep();
+    const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+    if(!lines.length) return;
+    const hdr = lines[0].split(sep);
+    const map = COLS.map(k=>({k, idx: hdr.indexOf(k)}));
+    lines.slice(1).forEach(line=>{
+      const parts = line.split(sep);
+      const obj = {};
+      map.forEach(m=>{ obj[m.k] = m.idx>=0 ? (parts[m.idx]??'') : ''; });
+      addRowFromObj(obj);
+    });
+    recalc(); saveState();
+  }
+  function addRowAndFocus(){
+    const tr = addRowFromObj({});
+    recalc(); saveState();
+    const first = tr.querySelector('input');
+    if(first){ try{ first.focus({preventScroll:true}); }catch(e){} }
+    tr.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+  function bindUI(){
+    const bAdd = document.getElementById('btnAdd');
+    const bAdd10 = document.getElementById('btnAdd10');
+    const bExport = document.getElementById('btnExport');
+    const bLimpar = document.getElementById('btnLimpar');
+    const bDup = document.getElementById('btnDuplicarUltima');
+    const bSalvar = document.getElementById('btnSalvarPadroes');
+    const bImport = document.getElementById('btnImport');
+    const inpFile = document.getElementById('fileCsv');
+    if(!bAdd){ alert('Erro: botão \"Adicionar peça\" não foi encontrado.'); return; }
+    bAdd.addEventListener('click', addRowAndFocus);
+    if (bAdd10) bAdd10.addEventListener('click', ()=>{ for(let i=0;i<10;i++) addRowFromObj({}); recalc(); saveState(); });
+    if (bExport) bExport.onclick = smartExportCSV;
+    if (bLimpar) bLimpar.addEventListener('click', ()=>{ bodyEl().innerHTML=''; recalc(); saveState(); });
+    if (bDup) bDup.addEventListener('click', ()=>{
+      const trs = bodyEl().querySelectorAll('tr');
+      if(!trs.length) return alert('Não há linha para duplicar.');
+      addRowFromObj(rowToObj(trs[trs.length-1])); recalc(); saveState();
+    });
+    if (bSalvar) bSalvar.addEventListener('click', saveState);
+    if (bImport) bImport.addEventListener('click', ()=> inpFile && inpFile.click());
+    if (inpFile) inpFile.addEventListener('change', (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const fr = new FileReader(); fr.onload = ()=> importCSV(fr.result); fr.readAsText(f, 'utf-8');
+    });
+    const fab = document.getElementById('fabAdd');
+    if (fab) fab.addEventListener('click', addRowAndFocus);
+  }
+  document.addEventListener('DOMContentLoaded', ()=>{
+    loadState();
+    bindUI();
+    if(!bodyEl().querySelector('tr')) addRowFromObj({});
+    recalc();
+  });
+  window.tests = {
+    expect(desc, cond){ if(!cond) throw new Error('Teste falhou: '+desc); console.log('✔', desc); },
+    testNextSequence(){
+      const before = nextSequence('Id_Peca');
+      const tr = addRowFromObj({});
+      const after = nextSequence('Id_Peca');
+      this.expect('nextSequence cresce', after >= before);
+      tr.remove();
+    },
+    testCSV(){
+      const sep = getSep();
+      const csv = (function(){
+        const rows = [{CodigoDaPeca_NoCliente:'1',Descricao:'Peça',Comprimento:'100',Largura:'50',Espessura:'15',CodigoNome_Material:'MDF',Id_Peca:'1',Quantidade:'1',NomeCliente:'Teste',CodigoProcesso:'',CodigoModuloPai:'',NomeProjetoAmbiente:'Amb',Descricao_Pai:'',BordaEsquerda:'',BordaSuperior:'',BordaDireita:'',BordaInferior:''}];
+        return toCSV(rows, sep);
+      })();
+      this.expect('CSV contém cabeçalho correto', csv.split('\n')[0] === COLS.join(sep));
+    },
+    testValidateRequired(){
+      const err = validateRows([{CodigoDaPeca_NoCliente:'', Descricao:''}]);
+      this.expect('Validação detecta obrigatórios', !!(err && err.field));
+    },
+    testRoundtripImport(){
+      const sep = ';';
+      const sample = [COLS.join(sep), `1;Peca;100;50;15;MDF;1;2;Cli;Proc;Mod;Amb;Pai;;; ;`].join('\n');
+      const before = bodyEl().querySelectorAll('tr').length;
+      importCSV(sample.replaceAll(';', sep));
+      const after = bodyEl().querySelectorAll('tr').length;
+      this.expect('Import adiciona linha', after > before);
+    },
+    runAll(){ this.testNextSequence(); this.testCSV(); this.testValidateRequired(); this.testRoundtripImport(); console.log('Todos os testes passaram.'); }
+  };
+  </script>
+</body>
+</html>
