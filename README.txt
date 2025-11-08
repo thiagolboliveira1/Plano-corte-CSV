@@ -16,7 +16,7 @@ Você tem duas formas de usar no iPhone:
 2. No GitHub, crie um repositório novo: `plano-corte-csv`.
 3. Envie **todos os arquivos** desta pasta (index.html, index_pwa.html, manifest.json, service-worker.js, pasta icons).
 4. Vá em **Settings → Pages → Source: Deploy from a branch**, selecione **main** e a pasta **/(root)**. Salve.
-5. Abra a URL do GitHub Pages que aparecer (algo como `https://seuusuario.github.io/plano-corte-csv/`).
+5. Abra a URL do GitHub Pages que aparecer (algo como `https://thiagolboliveira1.github.io/Plano-corte-CSV/`).
 6. No iPhone, abra essa URL no **Safari**, toque em **Compartilhar → Adicionar à Tela de Início**.
 7. Abra o atalho instalado. O service worker vai manter os arquivos em cache (funciona offline).
 
